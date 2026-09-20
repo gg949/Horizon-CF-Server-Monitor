@@ -1432,7 +1432,7 @@ function renderActiveDetailChart(server) {
   `).join('');
 
   const customSelectHtml = `
-    <div class="custom-dropdown" id="detail-hour-dropdown">
+    <div class="custom-dropdown${state.detailHourOpen ? ' is-open' : ''}" id="detail-hour-dropdown">
       <button class="custom-dropdown__trigger" id="detail-hour-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="切换时间范围">
         <span class="custom-dropdown__label">${activeHourObj.label}</span>
         <svg class="custom-dropdown__chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
@@ -1733,6 +1733,7 @@ function parseRoute() {
 
 async function handleRouteChange() {
   state.currentRoute = parseRoute();
+  state.detailHourOpen = false;
   const homeView = document.getElementById('home-view');
   const detailView = document.getElementById('detail-view');
 
@@ -2448,6 +2449,7 @@ function bindEvents() {
       e.stopPropagation();
       dropdown.classList.toggle('is-open');
       trigger.setAttribute('aria-expanded', dropdown.classList.contains('is-open'));
+      state.detailHourOpen = dropdown.classList.contains('is-open');
       return;
     }
 
@@ -2458,6 +2460,7 @@ function bindEvents() {
       state.detailHours = h;
       const dd = item.closest('.custom-dropdown');
       if (dd) dd.classList.remove('is-open');
+      state.detailHourOpen = false;
 
       if (state.currentRoute.serverId) {
         if (state.isDemoMode) {
@@ -2479,12 +2482,14 @@ function bindEvents() {
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.custom-dropdown')) {
       document.querySelectorAll('.custom-dropdown.is-open').forEach(el => el.classList.remove('is-open'));
+      state.detailHourOpen = false;
     }
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       document.querySelectorAll('.custom-dropdown.is-open').forEach(el => el.classList.remove('is-open'));
+      state.detailHourOpen = false;
     }
   });
 
