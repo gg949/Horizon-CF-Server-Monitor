@@ -67,6 +67,8 @@ const I18N = {
     h48: '2天',
     h96: '4天',
     h168: '7天',
+    h336: '14天',
+    h720: '30天',
     chartNoData: '暂无历史指标数据',
     ct: '电信',
     cu: '联通',
@@ -148,6 +150,8 @@ const I18N = {
     h48: '2d',
     h96: '4d',
     h168: '7d',
+    h336: '14d',
+    h720: '30d',
     chartNoData: 'No metric data available',
     ct: 'CT',
     cu: 'CU',
@@ -1413,7 +1417,9 @@ function renderActiveDetailChart(server) {
     { h: 24, label: t('h24') },
     { h: 48, label: t('h48') },
     { h: 96, label: t('h96') },
-    { h: 168, label: t('h168') }
+    { h: 168, label: t('h168') },
+    { h: 336, label: t('h336') },
+    { h: 720, label: t('h720') }
   ];
 
   const activeHourObj = hoursOptions.find(opt => opt.h === state.detailHours) || hoursOptions[3];
