@@ -1,3 +1,4 @@
+function __pdColor(i){return['#00d4aa','#ffb870','#4da6ff','#b392f0','#ff7b72','#79c0ff','#7ee787','#ffa657','#d2a8ff','#ffa198','#56d4dd','#f2cc60','#bc8cff','#58a6ff','#3fb950','#e3b341','#f85149','#a5d6ff','#39d353','#ffc680','#2f81f7','#d29922','#db61a2','#6e7681'][i%24]}function __pdProbes(server,cfg){if(Array.isArray(server&&server.probes)&&server.probes.length)return server.probes.filter(function(p){return p&&p.id}).map(function(p,i){return{id:i+1,key:String(p.id),name:String(p.name||p.id),ping:p.ping,loss:p.loss,latencyField:'ping_'+p.id,lossField:'loss_'+p.id,field:'ping_'+p.id,pingField:'ping_'+p.id,color:__pdColor(i)}});var keys=['ct','cu','cm','bd','node_1','node_2','node_3','node_4'],out=[],i,id,nm;for(i=0;i<keys.length;i++){id=keys[i];nm=cfg&&(id.indexOf('node_')===0?cfg[id+'_name']:cfg['custom_'+id+'_name']);out.push({id:i+1,key:id,name:String(nm||id).trim()||id,ping:server?server['ping_'+id]:void 0,loss:server?server['loss_'+id]:void 0,latencyField:'ping_'+id,lossField:'loss_'+id,field:'ping_'+id,pingField:'ping_'+id,color:__pdColor(i)})}return out};
 /**
  * Horizon Theme for CF-Server-Monitor
  * Flat & Clean Precision Minimalist Dashboard Style
@@ -191,6 +192,24 @@ function getCustomCarrierName(key) {
   }
   return t(key);
 }
+function getServerCarrierName(server, key) {
+  const probe = Array.isArray(server && server.probes) ? server.probes.find(p => p && p.id === key) : null;
+  if (probe && probe.name) return String(probe.name);
+  return getCustomCarrierName(key);
+}
+function activePingNodes(server, history) {
+  if (Array.isArray(server && server.probes) && server.probes.length) {
+    return server.probes.filter(p => p && p.id).map((p, i) => ({
+      key: String(p.id),
+      pingField: 'ping_' + p.id,
+      lossField: 'loss_' + p.id,
+      color: __pdColor(i),
+      name: String(p.name || p.id)
+    })).filter(node => isNodePresent(server, history, node.pingField, node.lossField) || isProbeMetricPresent(server[node.pingField]));
+  }
+  return ALL_PING_NODES.filter(node => isNodePresent(server, history, node.pingField, node.lossField));
+}
+
 
 // 8 大延迟与丢包监控节点定义 (按顺序包含基础4线路及新增4自定义节点)
 const ALL_PING_NODES = [
@@ -1234,13 +1253,13 @@ function renderServerCard(server) {
         </div>
 
         ${(() => {
-          const activeCardNodes = ALL_PING_NODES.filter(node => isProbeMetricPresent(server[node.pingField]));
+          const activeCardNodes = activePingNodes(server, null).filter(node => isProbeMetricPresent(server[node.pingField]));
           if (!activeCardNodes.length) return '';
           return `
             <div class="card-divider"></div>
             <div class="parallel-pings" style="grid-template-columns: repeat(${activeCardNodes.length}, 1fr)">
               ${activeCardNodes.map(node => {
-                const name = getCustomCarrierName(node.key);
+                const name = node.name || getServerCarrierName(server, node.key);
                 const val = server[node.pingField];
                 return `
                   <div class="ping-cell">
@@ -1361,9 +1380,9 @@ async function renderDetailPage() {
           <div class="spec-item"><span class="spec-label">${t('specConns')}</span><span class="spec-val">TCP: ${server.tcp_conn || 0} · UDP: ${server.udp_conn || 0}</span></div>
           <div class="spec-item"><span class="spec-label">${t('specProcesses')}</span><span class="spec-val">${server.processes || '--'} 进程</span></div>
           ${(() => {
-            const activeNodesForSpec = ALL_PING_NODES.filter(node => isNodePresent(server, state.detailHistory, node.pingField, node.lossField));
+            const activeNodesForSpec = activePingNodes(server, state.detailHistory);
             return activeNodesForSpec.map(node => {
-              const name = getCustomCarrierName(node.key);
+              const name = node.name || getServerCarrierName(server, node.key);
               const p = server ? server[node.pingField] : null;
               const l = server ? server[node.lossField] : null;
               const pText = isProbeMetricPresent(p) ? `${Math.round(p)}ms` : '--';
@@ -1512,9 +1531,7 @@ function renderActiveDetailChart(server) {
     `;
   } else if (state.detailTab === 'ping') {
     // 动态筛选存在有效 ping_x 或 loss_x 的活跃节点 (不存在的节点，包括以前的 bd，均不展示)
-    const activeNodes = ALL_PING_NODES.filter(node =>
-      isNodePresent(server, history, node.pingField, node.lossField)
-    );
+    const activeNodes = activePingNodes(server, history);
 
     if (activeNodes.length === 0) {
       svgHtml = `<svg class="chart-svg" viewBox="0 0 960 280"><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="var(--text-soft)" font-size="13">${escapeHtml(t('chartNoData'))}</text></svg>`;
@@ -1522,7 +1539,7 @@ function renderActiveDetailChart(server) {
       summaryText = t('chartNoData');
     } else {
       const seriesList = activeNodes.map(node => {
-        const name = getCustomCarrierName(node.key);
+        const name = node.name || getServerCarrierName(server, node.key);
         return {
           key: node.key,
           label: name,
@@ -1550,7 +1567,7 @@ function renderActiveDetailChart(server) {
       legendHtml = `
         <div class="chart-legend">
           ${activeNodes.map(node => {
-            const name = getCustomCarrierName(node.key);
+            const name = node.name || getServerCarrierName(server, node.key);
             const disabled = state.detailHiddenSeries.has(node.key) ? 'is-disabled' : '';
             return `<span class="legend-item ${disabled}" data-key="${node.key}"><span class="legend-dot" style="background:${node.color}"></span>${escapeHtml(name)}</span>`;
           }).join('')}
@@ -1559,7 +1576,7 @@ function renderActiveDetailChart(server) {
 
       // 顶部摘要展示各活跃节点的最新延迟与丢包
       const summaryItems = activeNodes.map(node => {
-        const name = getCustomCarrierName(node.key);
+        const name = node.name || getServerCarrierName(server, node.key);
         const p = server ? server[node.pingField] : null;
         const l = server ? server[node.lossField] : null;
         const pText = isProbeMetricPresent(p) ? `${Math.round(p)}ms` : '--';
