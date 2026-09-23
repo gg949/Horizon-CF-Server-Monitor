@@ -1283,7 +1283,7 @@ button {
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   padding-top: 0.35rem;
   width: 100%;
   max-width: 100%;
@@ -1334,10 +1334,13 @@ button {
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  flex-shrink: 1;
   margin-left: auto;
   text-align: right;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  max-width: 100%;
 }
 
 /* Footer - 纯净无背景，沉底融合 */
