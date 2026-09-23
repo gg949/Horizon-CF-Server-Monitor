@@ -198,16 +198,19 @@ function getServerCarrierName(server, key) {
   return getCustomCarrierName(key);
 }
 function activePingNodes(server, history) {
-  if (Array.isArray(server && server.probes) && server.probes.length) {
-    return server.probes.filter(p => p && p.id).map((p, i) => ({
-      key: String(p.id),
-      pingField: 'ping_' + p.id,
-      lossField: 'loss_' + p.id,
-      color: __pdColor(i),
-      name: String(p.name || p.id)
-    })).filter(node => isNodePresent(server, history, node.pingField, node.lossField) || isProbeMetricPresent(server[node.pingField]));
+  const fromProbes = Array.isArray(server && server.probes) ? server.probes.filter(p => p && p.id).map((p, i) => ({
+    key: String(p.id), pingField: 'ping_' + p.id, lossField: 'loss_' + p.id, color: __pdColor(i), name: String(p.name || p.id)
+  })) : [];
+  const fromLegacy = ALL_PING_NODES.map((node, i) => ({ ...node, name: node.name || getServerCarrierName(server, node.key), color: node.color || __pdColor(i) }));
+  const seen = new Set();
+  const out = [];
+  for (const node of fromLegacy.concat(fromProbes)) {
+    if (!node.key || seen.has(node.key)) continue;
+    if (!isNodePresent(server, history, node.pingField, node.lossField) && !isProbeMetricPresent(server[node.pingField])) continue;
+    seen.add(node.key);
+    out.push(node);
   }
-  return ALL_PING_NODES.filter(node => isNodePresent(server, history, node.pingField, node.lossField));
+  return out;
 }
 
 
