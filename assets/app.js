@@ -1,3 +1,4 @@
+function __pdExpandHistory(row){if(!row||typeof row!=="object")return row;var extra=row.extra_probes,obj=null;if(typeof extra==="string"&&extra){try{obj=JSON.parse(extra)}catch(e){obj=null}}else if(extra&&typeof extra==="object")obj=extra;if(obj){for(var k in obj){if(Object.prototype.hasOwnProperty.call(obj,k)&&row[k]===undefined)row[k]=obj[k]}}return row}function __pdProbeName(server,id,fallback){if(server&&Array.isArray(server.probes)){for(var i=0;i<server.probes.length;i++){var p=server.probes[i];if(p&&String(p.id)===String(id)&&p.name)return String(p.name)}}return fallback||id}
 function __pdColor(i){return['#00d4aa','#ffb870','#4da6ff','#b392f0','#ff7b72','#79c0ff','#7ee787','#ffa657','#d2a8ff','#ffa198','#56d4dd','#f2cc60','#bc8cff','#58a6ff','#3fb950','#e3b341','#f85149','#a5d6ff','#39d353','#ffc680','#2f81f7','#d29922','#db61a2','#6e7681'][i%24]}function __pdProbes(server,cfg){if(Array.isArray(server&&server.probes)&&server.probes.length)return server.probes.filter(function(p){return p&&p.id}).map(function(p,i){return{id:i+1,key:String(p.id),name:String(p.name||p.id),ping:p.ping,loss:p.loss,latencyField:'ping_'+p.id,lossField:'loss_'+p.id,field:'ping_'+p.id,pingField:'ping_'+p.id,color:__pdColor(i)}});var keys=['ct','cu','cm','bd','node_1','node_2','node_3','node_4'],out=[],i,id,nm;for(i=0;i<keys.length;i++){id=keys[i];nm=cfg&&(id.indexOf('node_')===0?cfg[id+'_name']:cfg['custom_'+id+'_name']);out.push({id:i+1,key:id,name:String(nm||id).trim()||id,ping:server?server['ping_'+id]:void 0,loss:server?server['loss_'+id]:void 0,latencyField:'ping_'+id,lossField:'loss_'+id,field:'ping_'+id,pingField:'ping_'+id,color:__pdColor(i)})}return out};
 /**
  * Horizon Theme for CF-Server-Monitor
@@ -1548,12 +1549,12 @@ function renderActiveDetailChart(server) {
           label: name,
           color: node.color,
           values: history.map(h => {
-            const v = safeNum(h[node.pingField], null);
+            const v = safeNum((__pdExpandHistory(h)||h)[node.pingField], null);
             return (v != null && v > 0) ? v : null;
           }),
           titles: history.map(h => {
-            const p = safeNum(h[node.pingField], null);
-            const l = safeNum(h[node.lossField], null);
+            const _h=__pdExpandHistory(h)||h; const p = safeNum(_h[node.pingField], null);
+            const l = safeNum(_h[node.lossField], null);
             const pText = (p != null && p > 0) ? `${Math.round(p)}ms` : '--';
             const lText = (l != null && l >= 0) ? ` · 丢包 ${Math.round(l)}%` : '';
             return `${name}: ${pText}${lText}`;
@@ -1572,7 +1573,11 @@ function renderActiveDetailChart(server) {
           ${activeNodes.map(node => {
             const name = node.name || getServerCarrierName(server, node.key);
             const disabled = state.detailHiddenSeries.has(node.key) ? 'is-disabled' : '';
-            return `<span class="legend-item ${disabled}" data-key="${node.key}"><span class="legend-dot" style="background:${node.color}"></span>${escapeHtml(name)}</span>`;
+            const p = server ? server[node.pingField] : null;
+            const l = server ? server[node.lossField] : null;
+            const pText = isProbeMetricPresent(p) ? `${Math.round(p)}ms` : '--';
+            const lText = isLossMetricPresent(l) ? `${Math.round(l)}%` : '--';
+            return `<span class="legend-item legend-item--stack ${disabled}" data-key="${node.key}"><span class="legend-dot" style="background:${node.color}"></span><span class="legend-item__text"><span class="legend-item__name">${escapeHtml(name)}</span><span class="legend-item__meta">${pText} · ${lText}</span></span></span>`;
           }).join('')}
         </div>
       `;

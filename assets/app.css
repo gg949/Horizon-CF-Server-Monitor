@@ -1747,3 +1747,31 @@ button {
     font-size: 0.7rem;
   }
 }
+
+
+.legend-item--stack {
+  align-items: flex-start;
+  gap: 6px;
+}
+.legend-item__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.legend-item__name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.legend-item__meta {
+  font-size: 0.66rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.chart-legend {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
